@@ -86,29 +86,51 @@ input:focus{border-color:#185FA5}
 </div>
 
 <script>
-// ── UTENTI — modifica qui per aggiungere proprietari reali ──────────────────
 const USERS = {
-  "admin@prismaretreats.it":{ password:"admin2025", role:"admin", name:"Admin Prisma", apartments:null },
-  "proprietario1@email.it":{ password:"pass1234", role:"owner", name:"Nome Proprietario 1", apartments:["123456"] },
-  "proprietario2@email.it":{ password:"pass5678", role:"owner", name:"Nome Proprietario 2", apartments:["234567","345678"] }
+  "admin@prismaretreats.it": {
+    password:"admin2025", role:"admin", name:"Admin Prisma", apartments:null
+  },
+  "silvana.valeron@virgilio.it": {
+    password:"silvana2025", role:"owner", name:"Silvana Valeron",
+    apartments:["2848427","2911251","2848432"]
+  },
+  "fregonamartinariccardo@gmail.com": {
+    password:"riccardo2025", role:"owner", name:"Riccardo Fregona",
+    apartments:["3020436"]
+  },
+  "host@frammentisimili.it": {
+    password:"claudio2025", role:"owner", name:"Claudio Del Monte",
+    apartments:["3207455","3207450","3207445"]
+  },
+  "zebradiasuite@gmail.com": {
+    password:"marco2025", role:"owner", name:"Marco Callegari",
+    apartments:["2390508"]
+  },
+  "arianna.innella20@gmail.com": {
+    password:"arianna2025", role:"owner", name:"Arianna Innella",
+    apartments:["3247807"]
+  },
+  "laquietedelperofiorito29@gmail.com": {
+    password:"mauro2025", role:"owner", name:"Mauro Avagliano",
+    apartments:["2819148"]
+  }
 };
-// ───────────────────────────────────────────────────────────────────────────
 
-const MN = ["Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic","Gen","Feb","Mar","Apr"];
-const MF = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
-let S = { user:null, apts:[], cur:null, charts:[] };
+const MN=["Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic","Gen","Feb","Mar","Apr"];
+const MF=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+let S={user:null,apts:[],cur:null,charts:[]};
 
 function doLogin(){
-  const email = document.getElementById("loginEmail").value.trim().toLowerCase();
-  const pass = document.getElementById("loginPass").value;
-  const u = USERS[email];
-  if(!u||u.password!==pass){ document.getElementById("loginErr").style.display="block"; return; }
-  S.user = {...u, email};
+  const email=document.getElementById("loginEmail").value.trim().toLowerCase();
+  const pass=document.getElementById("loginPass").value;
+  const u=USERS[email];
+  if(!u||u.password!==pass){document.getElementById("loginErr").style.display="block";return;}
+  S.user={...u,email};
   document.getElementById("loginErr").style.display="none";
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("appScreen").style.display="block";
-  document.getElementById("userName").textContent = u.name;
-  document.getElementById("userAvatar").textContent = u.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  document.getElementById("userName").textContent=u.name;
+  document.getElementById("userAvatar").textContent=u.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
   loadApts();
 }
 
@@ -120,65 +142,58 @@ function logout(){
   document.getElementById("loginPass").value="";
 }
 
-async function api(ep){ const r=await fetch(`/api/smoobu?endpoint=${encodeURIComponent(ep)}`); if(!r.ok)throw new Error("API error"); return r.json(); }
+async function api(ep){const r=await fetch(`/api/smoobu?endpoint=${encodeURIComponent(ep)}`);if(!r.ok)throw new Error("API error");return r.json();}
 
 async function loadApts(){
   try{
-    const d = await api("apartments");
-    let apts = (d.apartments||[]).map(a=>({id:String(a.id),name:a.name||"Appartamento"}));
+    const d=await api("apartments");
+    let apts=(d.apartments||[]).map(a=>({id:String(a.id),name:a.name||"Appartamento"}));
     if(S.user.apartments) apts=apts.filter(a=>S.user.apartments.includes(a.id));
-    S.apts=apts; S.cur=apts[0]||null;
+    S.apts=apts;S.cur=apts[0]||null;
     renderSidebar();
-    if(S.cur) loadDash(S.cur);
-  }catch(e){ document.getElementById("mainContent").innerHTML=`<div class="loading">Errore caricamento appartamenti.<br><small>${e.message}</small></div>`; }
+    if(S.cur)loadDash(S.cur);
+  }catch(e){document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`;}
 }
 
 function renderSidebar(){
-  document.getElementById("aptList").innerHTML = S.apts.map(a=>`
+  document.getElementById("aptList").innerHTML=S.apts.map(a=>`
     <div class="apt-item${a.id===S.cur?.id?" active":""}" onclick="switchApt('${a.id}')">
       <div class="apt-dot"></div>${a.name}</div>`).join("");
 }
 
-function switchApt(id){ S.cur=S.apts.find(a=>a.id===id); renderSidebar(); loadDash(S.cur); }
+function switchApt(id){S.cur=S.apts.find(a=>a.id===id);renderSidebar();loadDash(S.cur);}
 
 async function loadDash(apt){
-  S.charts.forEach(c=>{try{c.destroy()}catch(e){}});
-  S.charts=[];
+  S.charts.forEach(c=>{try{c.destroy()}catch(e){}});S.charts=[];
   document.getElementById("mainContent").innerHTML=`<div class="loading">Caricamento dati per ${apt.name}...</div>`;
-  const now=new Date();
-  const from=new Date(now); from.setMonth(from.getMonth()-11);
+  const now=new Date();const from=new Date(now);from.setMonth(from.getMonth()-11);
   const fmt=d=>d.toISOString().slice(0,10);
   try{
-    const d = await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${fmt(from)}&departureFrom=${fmt(from)}&pageSize=100`);
-    renderDash(apt, d.bookings||[]);
-  }catch(e){ document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`; }
+    const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${fmt(from)}&departureFrom=${fmt(from)}&pageSize=100`);
+    renderDash(apt,d.bookings||[]);
+  }catch(e){document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`;}
 }
 
-function renderDash(apt, bookings){
-  const now=new Date();
-  const tm=now.getMonth(); const ty=now.getFullYear();
-  const rev=Array(12).fill(0), nights=Array(12).fill(0);
+function renderDash(apt,bookings){
+  const now=new Date();const tm=now.getMonth();const ty=now.getFullYear();
+  const rev=Array(12).fill(0),nights=Array(12).fill(0);
   bookings.forEach(b=>{
-    const arr=new Date(b.arrival);
-    const mi=((arr.getMonth()-tm+12)%12);
-    if(b.price) rev[mi]+=Number(b.price)||0;
-    if(b.nights) nights[mi]+=Number(b.nights)||0;
+    const arr=new Date(b.arrival);const mi=((arr.getMonth()-tm+12)%12);
+    if(b.price)rev[mi]+=Number(b.price)||0;
+    if(b.nights)nights[mi]+=Number(b.nights)||0;
   });
   const revD=rev.map(v=>Math.round(v));
   const expD=revD.map(v=>Math.round(v*0.22));
   const netD=revD.map((v,i)=>v-expD[i]);
   const occD=nights.map(n=>Math.min(100,Math.round((n/30)*100)));
-
   const lr=revD[11],le=expD[11],ln=netD[11],lo=occD[11];
   const pr=revD[10],pn=netD[10],po=occD[10];
   const fe=(a,b)=>{const d=a-b;return(d>=0?"+":"")+"€"+Math.abs(d).toLocaleString("it");};
   const fd=(a,b)=>{const d=a-b;return(d>=0?"+":"")+d;};
-
-  const upcoming=bookings.filter(b=>new Date(b.departure)>=now).sort((a,b)=>new Date(a.arrival)-new Date(b.arrival)).slice(0,5);
+  const upcoming=bookings.filter(b=>new Date(b.departure)>=now).sort((a,b)=>new Date(a.arrival)-new Date(b.arrival)).slice(0,6);
   const fd2=s=>{const d=new Date(s);return d.getDate()+" "+MN[d.getMonth()];};
   const isAct=b=>new Date(b.arrival)<=now&&new Date(b.departure)>=now;
   const chN=b=>b.channel?.name||"Diretto";
-
   const bHtml=upcoming.length?upcoming.map(b=>`
     <div class="brow">
       <div><div style="font-weight:500">${b.firstname||""} ${b.lastname||""}</div><div style="font-size:11px;color:#888780">${fd2(b.arrival)} → ${fd2(b.departure)} · ${b.nights||"?"} notti</div></div>
