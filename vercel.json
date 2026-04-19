@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/smoobu", "destination": "/api/smoobu" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
