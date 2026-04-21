@@ -126,7 +126,10 @@ function buildMonthLabels() {
 // Restituisce il mese-indice (0-11) rispetto agli ultimi 12 mesi, con anno corretto
 function getMonthIndex(dateStr) {
   const now = new Date();
-  const d = new Date(dateStr);
+  // Parse esplicito per gestire formati tipo "2026-04-15" o "2026-04-15T..."
+  const parts = String(dateStr).split(/[-T]/);
+  const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2])||1);
+  if(isNaN(d.getTime())) return -1;
   const diffMonths = (now.getFullYear()-d.getFullYear())*12 + now.getMonth()-d.getMonth();
   const idx = 11 - diffMonths;
   return (idx >= 0 && idx <= 11) ? idx : -1;
@@ -147,6 +150,15 @@ function calcPrenotazione(price, channelName, cleaningFee, fiscal) {
 
 const MFL = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 let S = {user:null,apts:[],cur:null,charts:[]};
+
+// Dato un apartment id, restituisce il fiscal del proprietario corretto
+function getFiscalForApt(aptId){
+  if(S.user.role!=="admin") return S.user.fiscal||{regime:"admin",gestione:0};
+  for(const [email,u] of Object.entries(USERS)){
+    if(u.apartments && u.apartments.includes(aptId)) return u.fiscal;
+  }
+  return {regime:"admin",gestione:0};
+}
 
 function fmtE(n){return "€"+Math.round(n).toLocaleString("it");}
 function fmtDE(a,b){const d=a-b;return(d>=0?"+":"")+"€"+Math.abs(Math.round(d)).toLocaleString("it");}
@@ -209,7 +221,7 @@ async function loadDash(apt){
 
 function renderDash(apt, bookings){
   const now=new Date();
-  const fiscal=S.user.fiscal||{regime:"admin",gestione:0};
+  const fiscal=getFiscalForApt(apt.id);
   const monthLabels=buildMonthLabels();
 
   // Aggregazione per i 12 mesi con anno corretto
