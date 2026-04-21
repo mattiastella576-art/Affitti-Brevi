@@ -111,28 +111,35 @@ const USERS = {
   "laquietedelperofiorito29@gmail.com":{password:"mauro2025",role:"owner",name:"Mauro Avagliano",apartments:["2819148"],fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.15}}
 };
 
-// Genera etichette mesi con anno corretto (es. "Apr 26", "Mar 26", ...)
+// Genera etichette mesi: 12 passati + mese corrente + 5 futuri = 18 mesi
+// Indice 11 = mese corrente
+const TOTAL_MONTHS = 18;
+const CUR_IDX = 11;
+
 function buildMonthLabels() {
   const now = new Date();
   const labels = [];
   const mNames = ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"];
-  for(let i=11; i>=0; i--) {
+  for(let i=CUR_IDX; i>=0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    labels.push(mNames[d.getMonth()]+" '"+String(d.getFullYear()).slice(2));
+  }
+  for(let i=1; i<=TOTAL_MONTHS-CUR_IDX-1; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
     labels.push(mNames[d.getMonth()]+" '"+String(d.getFullYear()).slice(2));
   }
   return labels;
 }
 
-// Restituisce il mese-indice (0-11) rispetto agli ultimi 12 mesi, con anno corretto
+// Restituisce il mese-indice (0-17) rispetto alla finestra 18 mesi, CUR_IDX = mese corrente
 function getMonthIndex(dateStr) {
   const now = new Date();
-  // Parse esplicito per gestire formati tipo "2026-04-15" o "2026-04-15T..."
   const parts = String(dateStr).split(/[-T]/);
   const d = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2])||1);
   if(isNaN(d.getTime())) return -1;
   const diffMonths = (now.getFullYear()-d.getFullYear())*12 + now.getMonth()-d.getMonth();
-  const idx = 11 - diffMonths;
-  return (idx >= 0 && idx <= 11) ? idx : -1;
+  const idx = CUR_IDX - diffMonths;
+  return (idx >= 0 && idx < TOTAL_MONTHS) ? idx : -1;
 }
 
 // Calcolo per singola prenotazione (no commissione Prisma — quella è mensile)
@@ -212,8 +219,13 @@ async function loadDash(apt){
   document.getElementById("mainContent").innerHTML=`<div class="loading">Caricamento dati per ${apt.name}...</div>`;
   const now=new Date();
   const from=new Date(now);from.setMonth(from.getMonth()-11);
+  const to=new Date(now);to.setMonth(to.getMonth()+6);
+  // Periodo anno scorso per confronto YoY (stesso mese, anno precedente)
+  const yoyFrom=new Date(now.getFullYear()-1, now.getMonth(), 1);
+  const yoyTo=new Date(now.getFullYear()-1, now.getMonth()+1, 0);
   const f=d=>d.toISOString().slice(0,10);
   try{
+    // Carica tutte le prenotazioni (da -11 mesi a +6 mesi)
     let allBookings=[];
     let page=1;
     let hasMore=true;
@@ -221,22 +233,38 @@ async function loadDash(apt){
       const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(from)}&departureFrom=${f(from)}&pageSize=100&page=${page}`);
       const bookings=d.bookings||[];
       allBookings=allBookings.concat(bookings);
-      // Se meno di 100 risultati, non ci sono altre pagine
       if(bookings.length<100) hasMore=false;
       else page++;
     }
-    renderDash(apt,allBookings);
+    // Carica prenotazioni anno scorso per YoY
+    let yoyBookings=[];
+    page=1; hasMore=true;
+    while(hasMore){
+      const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(yoyFrom)}&arrivalTo=${f(yoyTo)}&pageSize=100&page=${page}`);
+      const bookings=d.bookings||[];
+      yoyBookings=yoyBookings.concat(bookings);
+      if(bookings.length<100) hasMore=false;
+      else page++;
+    }
+    renderDash(apt,allBookings,yoyBookings);
   }catch(e){document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`;}
 }
 
-function renderDash(apt, bookings){
+// Calcola notti dalla differenza tra arrival e departure
+function calcNights(arrival, departure){
+  const a=new Date(arrival), d=new Date(departure);
+  if(isNaN(a.getTime())||isNaN(d.getTime())) return 0;
+  return Math.max(0, Math.round((d-a)/(1000*60*60*24)));
+}
+
+function renderDash(apt, bookings, yoyBookings){
   const now=new Date();
   const fiscal=getFiscalForApt(apt.id);
   const monthLabels=buildMonthLabels();
 
-  // Aggregazione per i 12 mesi con anno corretto
-  const mLordo=Array(12).fill(0), mCommP=Array(12).fill(0);
-  const mCed=Array(12).fill(0), mPul=Array(12).fill(0), mNights=Array(12).fill(0);
+  // Aggregazione per i 18 mesi
+  const mLordo=Array(TOTAL_MONTHS).fill(0), mCommP=Array(TOTAL_MONTHS).fill(0);
+  const mCed=Array(TOTAL_MONTHS).fill(0), mPul=Array(TOTAL_MONTHS).fill(0), mNights=Array(TOTAL_MONTHS).fill(0);
 
   bookings.forEach(b=>{
     if(!b.price||Number(b.price)<=0) return;
@@ -247,8 +275,23 @@ function renderDash(apt, bookings){
     mCommP[mi]+=r.commPortale;
     mCed[mi]+=r.cedolare;
     mPul[mi]+=r.pulizie;
-    if(b.nights) mNights[mi]+=Number(b.nights);
+    const nights=calcNights(b.arrival, b.departure);
+    mNights[mi]+=nights;
   });
+
+  // YoY: calcola lordo e netto dello stesso mese dell'anno scorso
+  let yoyLordo=0, yoyCommP=0, yoyCed=0, yoyPul=0, yoyCommG=0;
+  (yoyBookings||[]).forEach(b=>{
+    if(!b.price||Number(b.price)<=0) return;
+    const r=calcPrenotazione(b.price,b.channel?.name||"",b.cleaning_fee||0,fiscal);
+    yoyLordo+=r.lordo;
+    yoyCommP+=r.commPortale;
+    yoyCed+=r.cedolare;
+    yoyPul+=r.pulizie;
+  });
+  yoyCommG=(yoyLordo-yoyCommP-yoyCed)*(fiscal.gestione||0);
+  const yoySpese=yoyCommP+yoyCed+yoyPul+yoyCommG;
+  const yoyNetto=yoyLordo-yoySpese;
 
   // Commissione Prisma calcolata sul netto dopo commissioni portali e cedolare secca
   const mCommG = mLordo.map((l,i)=>(l - mCommP[i] - mCed[i])*(fiscal.gestione||0));
@@ -262,15 +305,16 @@ function renderDash(apt, bookings){
   const revD=round(mLordo), netD=round(mNetto), speseD=round(mSpese);
   const commPD=round(mCommP), cedD=round(mCed), commGD=round(mCommG), pulD=round(mPul);
 
-  // Mese corrente = indice 11, precedente = 10
-  const lr=revD[11], ln=netD[11], lo=mOcc[11];
-  const pr=revD[10], pn=netD[10], po=mOcc[10];
-  const tCommP=commPD[11], tCed=cedD[11], tCommG=commGD[11], tPul=pulD[11], tSpese=speseD[11];
+  // Mese corrente = CUR_IDX, precedente = CUR_IDX-1
+  const lr=revD[CUR_IDX], ln=netD[CUR_IDX], lo=mOcc[CUR_IDX];
+  const pr=revD[CUR_IDX-1], pn=netD[CUR_IDX-1], po=mOcc[CUR_IDX-1];
+  const tCommP=commPD[CUR_IDX], tCed=cedD[CUR_IDX], tCommG=commGD[CUR_IDX], tPul=pulD[CUR_IDX], tSpese=speseD[CUR_IDX];
 
   const curMonthName=MFL[now.getMonth()]+" "+now.getFullYear();
+  const yoyMonthName=MFL[now.getMonth()]+" "+(now.getFullYear()-1);
   const regLabel=fiscal.regime==="cedolare"?"Cedolare secca 21%":fiscal.regime==="forfettario"?"Regime forfettario":fiscal.regime==="srl"?"SRL":"";
 
-  // Riepilogo economico completo
+  // Riepilogo economico completo con confronto YoY
   let bdRows=`
     <div class="bdrow"><span>Entrate lorde</span><span style="font-weight:500">${fmtE(lr)}</span></div>
     <div class="bdrow neg"><span>Commissioni portali (Airbnb 18,91% / Booking 23,79%)</span><span>-${fmtE(tCommP)}</span></div>`;
@@ -282,6 +326,19 @@ function renderDash(apt, bookings){
   bdRows+=`<div class="bdrow"><span style="color:#888780;font-size:12px">Totale spese e trattenute</span><span style="color:#D85A30">-${fmtE(tSpese)}</span></div>`;
   bdRows+=`<div class="bdrow total"><span>Netto proprietario</span><span>${fmtE(ln)}</span></div>`;
 
+  // Confronto anno su anno
+  const yoyDiffLordo=lr-Math.round(yoyLordo);
+  const yoyDiffNetto=ln-Math.round(yoyNetto);
+  bdRows+=`<div style="margin-top:14px;padding-top:12px;border-top:0.5px solid #e0dfd8">
+    <div style="font-size:11px;color:#888780;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;font-weight:500">Confronto con ${yoyMonthName}</div>
+    <div class="bdrow"><span>Lordo ${yoyMonthName}</span><span style="font-weight:500">${fmtE(Math.round(yoyLordo))}</span></div>
+    <div class="bdrow"><span>Lordo ${curMonthName}</span><span style="font-weight:500">${fmtE(lr)}</span></div>
+    <div class="bdrow"><span>Differenza lordo</span><span class="${yoyDiffLordo>=0?'up':'dn'}" style="font-weight:500">${yoyDiffLordo>=0?'+':''}${fmtE(Math.abs(yoyDiffLordo))}</span></div>
+    <div class="bdrow"><span>Netto ${yoyMonthName}</span><span style="font-weight:500">${fmtE(Math.round(yoyNetto))}</span></div>
+    <div class="bdrow"><span>Netto ${curMonthName}</span><span style="font-weight:500">${fmtE(ln)}</span></div>
+    <div class="bdrow"><span>Differenza netto</span><span class="${yoyDiffNetto>=0?'up':'dn'}" style="font-weight:500">${yoyDiffNetto>=0?'+':''}${fmtE(Math.abs(yoyDiffNetto))}</span></div>
+  </div>`;
+
   // Prenotazioni future
   const upcoming=bookings.filter(b=>new Date(b.departure)>=now).sort((a,b)=>new Date(a.arrival)-new Date(b.arrival)).slice(0,6);
   const fd2=s=>{const d=new Date(s);return d.getDate()+" "+["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"][d.getMonth()];};
@@ -291,7 +348,7 @@ function renderDash(apt, bookings){
   const bHtml=upcoming.length?upcoming.map(b=>`
     <div class="brow">
       <div><div style="font-weight:500">${b.firstname||""} ${b.lastname||""}</div>
-      <div style="font-size:11px;color:#888780">${fd2(b.arrival)} → ${fd2(b.departure)} · ${b.nights||"?"} notti</div></div>
+      <div style="font-size:11px;color:#888780">${fd2(b.arrival)} → ${fd2(b.departure)} · ${calcNights(b.arrival,b.departure)} notti</div></div>
       <div><span class="tag ${chN(b).toLowerCase().includes('airbnb')?'ta':'tbk'}">${chN(b)}</span></div>
       <div style="font-weight:500">${fmtE(Number(b.price||0))} <span style="font-size:10px;color:#888780;font-weight:400">lordo</span></div>
       <div><span class="tag ${isAct(b)?'tg':'tb'}">${isAct(b)?'In corso':'Confermata'}</span></div>
@@ -323,7 +380,7 @@ function renderDash(apt, bookings){
     <div class="charts-grid">
       <div class="card" style="margin-bottom:0"><div class="ct">Occupazione (%)</div><div style="position:relative;height:180px"><canvas id="occChart" role="img" aria-label="Occupazione">Dati occupazione.</canvas></div></div>
       <div class="card" style="margin-bottom:0">
-        <div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Lordo</span><span><span class="ldot" style="background:#D85A30"></span>Spese totali</span><span><span class="ldot" style="background:#1D9E75"></span>Netto</span></div>
+        <div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Lordo</span><span><span class="ldot" style="background:#D85A30"></span>Spese totali</span><span><span class="ldot" style="background:#1D9E75"></span>Netto</span><span><span class="ldot" style="background:rgba(24,95,165,0.2);border:1px dashed #185FA5"></span>Previsione</span></div>
         <div class="ct">Lordo vs spese vs netto (€)</div>
         <div style="position:relative;height:180px"><canvas id="revChart" role="img" aria-label="Lordo spese netto">Dati.</canvas></div>
       </div>
@@ -336,17 +393,23 @@ function renderDash(apt, bookings){
     </div>`;
 
   requestAnimationFrame(()=>{
+    // Colori per barre: solidi per passato/corrente, più chiari per futuro
+    const occBg = mOcc.map((_,i)=>i<=CUR_IDX?"rgba(24,95,165,0.07)":"rgba(24,95,165,0.03)");
+    const occBorder = mOcc.map((_,i)=>i<=CUR_IDX?"#185FA5":"rgba(24,95,165,0.4)");
+    const revBg = revD.map((_,i)=>i<=CUR_IDX?"rgba(24,95,165,0.45)":"rgba(24,95,165,0.2)");
+    const speseBg = speseD.map((_,i)=>i<=CUR_IDX?"rgba(216,90,48,0.6)":"rgba(216,90,48,0.25)");
+
     S.charts.push(new Chart(document.getElementById("occChart"),{
       type:"line",
-      data:{labels:monthLabels,datasets:[{data:mOcc,borderColor:"#185FA5",backgroundColor:"rgba(24,95,165,0.07)",tension:0.4,fill:true,pointRadius:2,pointBackgroundColor:"#185FA5"}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+"%",font:{size:10},color:"#888780"},grid:{color:"rgba(0,0,0,0.05)"}},x:{ticks:{font:{size:10},color:"#888780",autoSkip:false,maxRotation:45},grid:{display:false}}}}
+      data:{labels:monthLabels,datasets:[{data:mOcc,borderColor:occBorder,backgroundColor:"rgba(24,95,165,0.07)",tension:0.4,fill:true,pointRadius:2,pointBackgroundColor:occBorder,segment:{borderDash:ctx=>ctx.p0DataIndex>=CUR_IDX?[5,3]:undefined,borderColor:ctx=>ctx.p0DataIndex>=CUR_IDX?"rgba(24,95,165,0.4)":"#185FA5"}}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},annotation:false},scales:{y:{min:0,max:100,ticks:{callback:v=>v+"%",font:{size:10},color:"#888780"},grid:{color:"rgba(0,0,0,0.05)"}},x:{ticks:{font:{size:10},color:"#888780",autoSkip:false,maxRotation:45},grid:{display:false}}}}
     }));
     S.charts.push(new Chart(document.getElementById("revChart"),{
       type:"bar",
       data:{labels:monthLabels,datasets:[
-        {data:revD,backgroundColor:"rgba(24,95,165,0.45)",borderRadius:2,borderSkipped:false,label:"Lordo"},
-        {data:speseD,backgroundColor:"rgba(216,90,48,0.6)",borderRadius:2,borderSkipped:false,label:"Spese"},
-        {data:netD,type:"line",borderColor:"#1D9E75",backgroundColor:"transparent",tension:0.4,pointRadius:2,pointBackgroundColor:"#1D9E75",label:"Netto"}
+        {data:revD,backgroundColor:revBg,borderRadius:2,borderSkipped:false,label:"Lordo"},
+        {data:speseD,backgroundColor:speseBg,borderRadius:2,borderSkipped:false,label:"Spese"},
+        {data:netD,type:"line",borderColor:"#1D9E75",backgroundColor:"transparent",tension:0.4,pointRadius:2,pointBackgroundColor:netD.map((_,i)=>i<=CUR_IDX?"#1D9E75":"rgba(29,158,117,0.4)"),label:"Netto",segment:{borderDash:ctx=>ctx.p0DataIndex>=CUR_IDX?[5,3]:undefined,borderColor:ctx=>ctx.p0DataIndex>=CUR_IDX?"rgba(29,158,117,0.4)":"#1D9E75"}}
       ]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>"€"+(v/1000).toFixed(1)+"k",font:{size:10},color:"#888780"},grid:{color:"rgba(0,0,0,0.05)"}},x:{ticks:{font:{size:10},color:"#888780",autoSkip:false,maxRotation:45},grid:{display:false}}}}
     }));
