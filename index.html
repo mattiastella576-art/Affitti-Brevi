@@ -19,8 +19,8 @@ input:focus{border-color:#185FA5}
 .btn:hover{background:#0C447C}
 .err{color:#A32D2D;font-size:12px;margin-top:10px;display:none}
 .app{display:none}
-.sidebar{width:220px;background:#fff;border-right:0.5px solid #e0dfd8;min-height:100vh;padding:1.25rem 1rem;position:fixed;top:0;left:0}
-.main{margin-left:220px;padding:1.5rem;max-width:960px}
+.sidebar{width:220px;background:#fff;border-right:0.5px solid #e0dfd8;min-height:100vh;padding:1.25rem 1rem;position:fixed;top:0;left:0;z-index:10}
+.main{margin-left:220px;padding:1.5rem;max-width:1000px}
 .s-label{font-size:10px;color:#888780;text-transform:uppercase;letter-spacing:.06em;margin:0 4px 8px;font-weight:500;display:block}
 .apt-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;cursor:pointer;font-size:13px;color:#5f5e5a;margin-bottom:2px}
 .apt-item:hover{background:#f5f5f3}
@@ -29,14 +29,15 @@ input:focus{border-color:#185FA5}
 .apt-item.active .apt-dot{background:#185FA5}
 .s-footer{position:absolute;bottom:1.25rem;left:1rem;right:1rem}
 .avatar{width:28px;height:28px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#185FA5;flex-shrink:0}
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:18px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:18px}
 .metric{background:#f5f5f3;border-radius:8px;padding:14px 16px}
 .ml{font-size:11px;color:#888780;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
-.mv{font-size:22px;font-weight:500}
+.mv{font-size:21px;font-weight:500}
 .md{font-size:11px;margin-top:3px}
 .up{color:#1D9E75}.dn{color:#D85A30}
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.card{background:#fff;border:0.5px solid #e0dfd8;border-radius:12px;padding:16px}
+.card{background:#fff;border:0.5px solid #e0dfd8;border-radius:12px;padding:16px;margin-bottom:14px}
+.card-nm{background:#fff;border:0.5px solid #e0dfd8;border-radius:12px;padding:16px}
 .ct{font-size:12px;color:#888780;text-transform:uppercase;letter-spacing:.05em;font-weight:500;margin-bottom:14px}
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:#888780}
 .legend span{display:flex;align-items:center;gap:5px}
@@ -49,9 +50,13 @@ input:focus{border-color:#185FA5}
 .ta{background:#FFE0D3;color:#993C1D}
 .tbk{background:#E6F1FB;color:#0C447C}
 .loading{text-align:center;padding:3rem;color:#888780;font-size:14px}
-.bdrow{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;color:#5f5e5a}
-.bdrow.neg{color:#D85A30}
-.bdrow.total{font-weight:500;font-size:13px;color:#1a1a18;border-top:0.5px solid #e0dfd8;margin-top:4px;padding-top:8px}
+.bdrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;color:#5f5e5a;border-bottom:0.5px solid #f0efe8}
+.bdrow:last-child{border-bottom:none}
+.bdrow.neg span:last-child{color:#D85A30}
+.bdrow.total{font-weight:500;font-size:14px;color:#1a1a18;border-top:1px solid #e0dfd8;margin-top:4px;padding-top:10px;border-bottom:none}
+.bdrow.total span:last-child{color:#1D9E75;font-size:16px}
+.apt-breakdown{background:#f9f9f7;border-radius:10px;padding:14px 16px;margin-bottom:10px}
+.apt-breakdown-title{font-size:13px;font-weight:500;margin-bottom:10px;color:#1a1a18}
 @media(max-width:680px){.sidebar{display:none}.main{margin-left:0;padding:1rem}.charts-grid{grid-template-columns:1fr}.brow{grid-template-columns:1fr auto}}
 </style>
 </head>
@@ -81,7 +86,10 @@ input:focus{border-color:#185FA5}
     <div class="s-footer">
       <div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:#f5f5f3">
         <div class="avatar" id="userAvatar"></div>
-        <div style="overflow:hidden"><div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="userName"></div><div style="font-size:11px;color:#888780;cursor:pointer" onclick="logout()">Esci</div></div>
+        <div style="overflow:hidden">
+          <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="userName"></div>
+          <div style="font-size:11px;color:#888780;cursor:pointer" onclick="logout()">Esci</div>
+        </div>
       </div>
     </div>
   </div>
@@ -89,80 +97,119 @@ input:focus{border-color:#185FA5}
 </div>
 
 <script>
-// Commissioni effettive
+// ── COMMISSIONI PORTALI ──────────────────────────────────────────────────────
 // Airbnb: 15.5% + IVA 22% = 18.91%
 // Booking: 18% + 1.5% transazione + IVA 22% = 23.79%
 // SRL: IVA è partita di giro → Airbnb 15.5%, Booking 19.5%
-const AIRBNB = 0.1891;
-const BOOKING = 0.2379;
+const AIRBNB     = 0.1891;
+const BOOKING    = 0.2379;
 const AIRBNB_SRL = 0.155;
-const BOOKING_SRL = 0.195;
+const BOOKING_SRL= 0.195;
 
+// ── UTENTI ───────────────────────────────────────────────────────────────────
 const USERS = {
-  "admin@prismaretreats.it":{password:"admin2025",role:"admin",name:"Admin Prisma",apartments:null,fiscal:{regime:"admin",gestione:0}},
-  "silvana.valeron@virgilio.it":{password:"silvana2025",role:"owner",name:"Silvana Valeron",apartments:["2848427","2911251","2848432"],fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.20}},
-  "fregonamartinariccardo@gmail.com":{password:"riccardo2025",role:"owner",name:"Riccardo Fregona",apartments:["3020436"],fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.15}},
-  "host@frammentisimili.it":{password:"claudio2025",role:"owner",name:"Claudio Del Monte",apartments:["3207455","3207450","3207445"],fiscal:{regime:"forfettario",gestione:0.20,pulizie:true}},
-  "zebradiasuite@gmail.com":{password:"marco2025",role:"owner",name:"Marco Callegari",apartments:["2390508"],fiscal:{regime:"srl",gestione:0.18,pulizie:true}},
-  "arianna.innella20@gmail.com":{password:"arianna2025",role:"owner",name:"Arianna Innella",apartments:["3247807"],fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.15}},
-  "laquietedelperofiorito29@gmail.com":{password:"mauro2025",role:"owner",name:"Mauro Avagliano",apartments:["2819148"],fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.15}}
+  "admin@prismaretreats.it":{
+    password:"admin2025",role:"admin",name:"Admin Prisma",apartments:null,
+    fiscal:{regime:"admin",gestione:0}
+  },
+  "silvana.valeron@virgilio.it":{
+    password:"silvana2025",role:"owner",name:"Silvana Valeron",
+    apartments:["2848427","2911251","2848432"],
+    fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.20}
+  },
+  "fregonamartinariccardo@gmail.com":{
+    password:"riccardo2025",role:"owner",name:"Riccardo Fregona",
+    apartments:["3020436"],
+    fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.15}
+  },
+  "host@frammentisimili.it":{
+    password:"claudio2025",role:"owner",name:"Claudio Del Monte",
+    apartments:["3207455","3207450","3207445"],
+    fiscal:{regime:"forfettario",gestione:0.20,pulizie:true}
+  },
+  "zebradiasuite@gmail.com":{
+    password:"marco2025",role:"owner",name:"Marco Callegari",
+    apartments:["2390508"],
+    fiscal:{regime:"srl",gestione:0.18,pulizie:true}
+  },
+  "arianna.innella20@gmail.com":{
+    password:"arianna2025",role:"owner",name:"Arianna Innella",
+    apartments:["3247807"],
+    fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.15}
+  },
+  "laquietedelperofiorito29@gmail.com":{
+    password:"mauro2025",role:"owner",name:"Mauro Avagliano",
+    apartments:["2819148"],
+    fiscal:{regime:"cedolare",cedolare:0.21,gestione:0.15}
+  }
 };
 
-// Calcolo netto corretto:
+// ── CALCOLO PER SINGOLA PRENOTAZIONE ────────────────────────────────────────
 // 1. Lordo (da Smoobu)
-// 2. - Commissione portale (Airbnb o Booking, con/senza IVA)
-// 3. = Imponibile
-// 4. - Cedolare secca 21% sull'imponibile (solo regime cedolare)
-// 5. = Base gestione
-// 6. - Commissione Prisma % sulla base gestione
-// 7. - Pulizie (solo Claudio e Marco, da Smoobu)
-// 8. = Netto proprietario
-function calcBreakdown(price, channelName, cleaningFee, fiscal) {
+// 2. - Commissione portale (Airbnb 18.91% o Booking 23.79%, senza IVA per SRL)
+// 3. - Cedolare secca 21% SUL LORDO (trattenuta dal portale)
+// 4. = Subtotale (base per il calcolo gestione mensile)
+// NB: commissione Prisma applicata sul totale mensile, non per prenotazione
+function calcPrenotazione(price, channelName, cleaningFee, fiscal) {
   const lordo = Number(price) || 0;
   const isSRL = fiscal.regime === "srl";
   const ch = (channelName||"").toLowerCase();
 
-  // Step 1: commissione portale sul lordo
   let commPortale = 0;
-  if(ch.includes("airbnb")) commPortale = lordo * (isSRL ? AIRBNB_SRL : AIRBNB);
+  if(ch.includes("airbnb"))   commPortale = lordo * (isSRL ? AIRBNB_SRL : AIRBNB);
   else if(ch.includes("booking")) commPortale = lordo * (isSRL ? BOOKING_SRL : BOOKING);
-  const imponibile = lordo - commPortale;
 
-  // Step 2: cedolare secca sull'imponibile
   let cedolare = 0;
   if(fiscal.regime === "cedolare") cedolare = lordo * (fiscal.cedolare || 0.21);
-  const baseGestione = imponibile - cedolare;
 
-  // Step 3: commissione gestione Prisma sulla base gestione
-  const commGestione = baseGestione * (fiscal.gestione || 0);
-  const dopoGestione = baseGestione - commGestione;
-
-  // Step 4: pulizie da Smoobu
   const pulizie = fiscal.pulizie ? (Number(cleaningFee) || 0) : 0;
-  const netto = dopoGestione - pulizie;
+  const subtotale = lordo - commPortale - cedolare - pulizie;
 
-  return { lordo, commPortale, imponibile, cedolare, baseGestione, commGestione, pulizie, netto };
+  return { lordo, commPortale, cedolare, pulizie, subtotale };
 }
 
-const MN=["Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic","Gen","Feb","Mar","Apr"];
-const MF=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
-let S={user:null,apts:[],cur:null,charts:[]};
+// ── CALCOLO MENSILE PER APPARTAMENTO ────────────────────────────────────────
+// Aggrega le prenotazioni del mese, poi applica la commissione Prisma sul totale lordo mensile
+function calcMensile(bookings, fiscal, monthIdx, currentMonth) {
+  let totLordo=0, totCommP=0, totCed=0, totPul=0;
 
-function fmtE(n){return "€"+Math.round(n).toLocaleString("it");}
-function fmtD(a,b){const d=a-b;return(d>=0?"+":"")+"€"+Math.abs(Math.round(d)).toLocaleString("it");}
-function fmtPt(a,b){const d=a-b;return(d>=0?"+":"")+d+"pt";}
+  bookings.forEach(b => {
+    if(!b.price || Number(b.price)<=0) return;
+    const arr = new Date(b.arrival);
+    const mi = ((arr.getMonth() - currentMonth + 12) % 12);
+    if(mi !== monthIdx) return;
+    const r = calcPrenotazione(b.price, b.channel?.name||"", b.cleaning_fee||0, fiscal);
+    totLordo += r.lordo;
+    totCommP += r.commPortale;
+    totCed   += r.cedolare;
+    totPul   += r.pulizie;
+  });
+
+  const commGestione = totLordo * (fiscal.gestione || 0);
+  const netto = totLordo - totCommP - totCed - totPul - commGestione;
+
+  return { lordo:totLordo, commPortale:totCommP, cedolare:totCed, pulizie:totPul, commGestione, netto };
+}
+
+const MN  = ["Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic","Gen","Feb","Mar","Apr"];
+const MFL = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+let S = {user:null,apts:[],cur:null,charts:[]};
+
+function fmtE(n){ return "€"+Math.round(n).toLocaleString("it"); }
+function fmtDE(a,b){ const d=a-b; return (d>=0?"+":"")+"€"+Math.abs(Math.round(d)).toLocaleString("it"); }
+function fmtPt(a,b){ const d=a-b; return (d>=0?"+":"")+Math.round(d)+"pt"; }
 
 function doLogin(){
-  const email=document.getElementById("loginEmail").value.trim().toLowerCase();
-  const pass=document.getElementById("loginPass").value;
-  const u=USERS[email];
-  if(!u||u.password!==pass){document.getElementById("loginErr").style.display="block";return;}
-  S.user={...u,email};
+  const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+  const pass  = document.getElementById("loginPass").value;
+  const u = USERS[email];
+  if(!u||u.password!==pass){ document.getElementById("loginErr").style.display="block"; return; }
+  S.user = {...u, email};
   document.getElementById("loginErr").style.display="none";
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("appScreen").style.display="block";
-  document.getElementById("userName").textContent=u.name;
-  document.getElementById("userAvatar").textContent=u.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  document.getElementById("userName").textContent = u.name;
+  document.getElementById("userAvatar").textContent = u.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
   loadApts();
 }
 
@@ -174,118 +221,155 @@ function logout(){
   document.getElementById("loginPass").value="";
 }
 
-async function api(ep){const r=await fetch(`/api/smoobu?endpoint=${encodeURIComponent(ep)}`);if(!r.ok)throw new Error("API error");return r.json();}
+async function api(ep){ const r=await fetch(`/api/smoobu?endpoint=${encodeURIComponent(ep)}`); if(!r.ok) throw new Error("API error"); return r.json(); }
 
 async function loadApts(){
   try{
-    const d=await api("apartments");
-    let apts=(d.apartments||[]).map(a=>({id:String(a.id),name:a.name||"Appartamento"}));
-    if(S.user.apartments) apts=apts.filter(a=>S.user.apartments.includes(a.id));
-    S.apts=apts;S.cur=apts[0]||null;
+    const d = await api("apartments");
+    let apts = (d.apartments||[]).map(a=>({id:String(a.id), name:a.name||"Appartamento"}));
+    if(S.user.apartments) apts = apts.filter(a=>S.user.apartments.includes(a.id));
+    S.apts=apts; S.cur=apts[0]||null;
     renderSidebar();
-    if(S.cur)loadDash(S.cur);
-  }catch(e){document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`;}
+    if(S.cur) loadDash(S.cur);
+  }catch(e){ document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`; }
 }
 
 function renderSidebar(){
-  document.getElementById("aptList").innerHTML=S.apts.map(a=>`
+  document.getElementById("aptList").innerHTML = S.apts.map(a=>`
     <div class="apt-item${a.id===S.cur?.id?" active":""}" onclick="switchApt('${a.id}')">
-      <div class="apt-dot"></div>${a.name}</div>`).join("");
+      <div class="apt-dot"></div>${a.name}
+    </div>`).join("");
 }
 
-function switchApt(id){S.cur=S.apts.find(a=>a.id===id);renderSidebar();loadDash(S.cur);}
+function switchApt(id){ S.cur=S.apts.find(a=>a.id===id); renderSidebar(); loadDash(S.cur); }
 
 async function loadDash(apt){
-  S.charts.forEach(c=>{try{c.destroy()}catch(e){}});S.charts=[];
+  S.charts.forEach(c=>{try{c.destroy()}catch(e){}});
+  S.charts=[];
   document.getElementById("mainContent").innerHTML=`<div class="loading">Caricamento dati per ${apt.name}...</div>`;
-  const now=new Date();const from=new Date(now);from.setMonth(from.getMonth()-11);
+  const now=new Date();
+  const from=new Date(now); from.setMonth(from.getMonth()-11);
   const f=d=>d.toISOString().slice(0,10);
   try{
-    const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(from)}&departureFrom=${f(from)}&pageSize=100`);
-    renderDash(apt,d.bookings||[]);
-  }catch(e){document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`;}
+    const d = await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(from)}&departureFrom=${f(from)}&pageSize=100`);
+    renderDash(apt, d.bookings||[]);
+  }catch(e){ document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`; }
 }
 
 function renderDash(apt, bookings){
-  const now=new Date();const tm=now.getMonth();const ty=now.getFullYear();
-  const fiscal=S.user.fiscal||{regime:"admin",gestione:0};
+  const now = new Date();
+  const tm  = now.getMonth();
+  const ty  = now.getFullYear();
+  const fiscal = S.user.fiscal || {regime:"admin", gestione:0};
 
-  const mLordo=Array(12).fill(0),mCommP=Array(12).fill(0),mCed=Array(12).fill(0);
-  const mCommG=Array(12).fill(0),mPul=Array(12).fill(0),mNetto=Array(12).fill(0);
-  const mNights=Array(12).fill(0);
-
+  // Calcola 12 mesi
+  const months = Array.from({length:12}, (_,mi) => calcMensile(bookings, fiscal, mi, tm));
+  const mNights = Array(12).fill(0);
   bookings.forEach(b=>{
-    if(!b.price||Number(b.price)<=0) return;
+    if(!b.nights) return;
     const arr=new Date(b.arrival);
     const mi=((arr.getMonth()-tm+12)%12);
-    const bd=calcBreakdown(b.price, b.channel?.name||"", b.cleaning_fee||0, fiscal);
-    mLordo[mi]+=bd.lordo; mCommP[mi]+=bd.commPortale; mCed[mi]+=bd.cedolare;
-    mCommG[mi]+=bd.commGestione; mPul[mi]+=bd.pulizie; mNetto[mi]+=bd.netto;
-    if(b.nights) mNights[mi]+=Number(b.nights);
+    mNights[mi]+=Number(b.nights);
   });
 
-  const r=arr=>arr.map(v=>Math.round(v));
-  const revD=r(mLordo),netD=r(mNetto),commPD=r(mCommP),cedD=r(mCed),commGD=r(mCommG),pulD=r(mPul);
-  const occD=mNights.map(n=>Math.min(100,Math.round((n/30)*100)));
+  const revD   = months.map(m=>Math.round(m.lordo));
+  const netD   = months.map(m=>Math.round(m.netto));
+  const commPD = months.map(m=>Math.round(m.commPortale));
+  const cedD   = months.map(m=>Math.round(m.cedolare));
+  const commGD = months.map(m=>Math.round(m.commGestione));
+  const pulD   = months.map(m=>Math.round(m.pulizie));
+  const occD   = mNights.map(n=>Math.min(100,Math.round((n/30)*100)));
 
-  const lr=revD[11],ln=netD[11],lo=occD[11];
-  const pr=revD[10],pn=netD[10],po=occD[10];
-  const tCommP=commPD[11],tCed=cedD[11],tCommG=commGD[11],tPul=pulD[11];
+  // Mese corrente (indice 11) e precedente (10)
+  const cur = months[11], prv = months[10];
+  const lr=Math.round(cur.lordo), ln=Math.round(cur.netto), lo=occD[11];
+  const pr=Math.round(prv.lordo), pn=Math.round(prv.netto), po=occD[10];
+  const tCommP=Math.round(cur.commPortale), tCed=Math.round(cur.cedolare);
+  const tCommG=Math.round(cur.commGestione), tPul=Math.round(cur.pulizie);
 
-  // Riepilogo spese
-  let bdRows=`<div class="bdrow"><span>Entrate lorde</span><span style="font-weight:500">${fmtE(lr)}</span></div>
-    <div class="bdrow neg"><span>Commissioni portali (Airbnb/Booking)</span><span>-${fmtE(tCommP)}</span></div>`;
-  if(fiscal.regime==="cedolare") bdRows+=`<div class="bdrow neg"><span>Cedolare secca 21%</span><span>-${fmtE(tCed)}</span></div>`;
-  bdRows+=`<div class="bdrow neg"><span>Commissione gestione Prisma Retreats (${Math.round((fiscal.gestione||0)*100)}%)</span><span>-${fmtE(tCommG)}</span></div>`;
-  if(fiscal.pulizie) bdRows+=`<div class="bdrow neg"><span>Spese pulizie</span><span>-${fmtE(tPul)}</span></div>`;
-  bdRows+=`<div class="bdrow total"><span>Netto proprietario</span><span style="color:#1D9E75">${fmtE(ln)}</span></div>`;
+  const regLabel = fiscal.regime==="cedolare"?"Cedolare secca 21%":fiscal.regime==="forfettario"?"Regime forfettario":fiscal.regime==="srl"?"SRL":"";
 
-  const upcoming=bookings.filter(b=>new Date(b.departure)>=now).sort((a,b)=>new Date(a.arrival)-new Date(b.arrival)).slice(0,6);
-  const fd2=s=>{const d=new Date(s);return d.getDate()+" "+MN[d.getMonth()];};
-  const isAct=b=>new Date(b.arrival)<=now&&new Date(b.departure)>=now;
-  const chN=b=>b.channel?.name||"Diretto";
+  // Prenotazioni future
+  const upcoming = bookings
+    .filter(b=>new Date(b.departure)>=now)
+    .sort((a,b)=>new Date(a.arrival)-new Date(b.arrival))
+    .slice(0,6);
+  const fd2 = s=>{ const d=new Date(s); return d.getDate()+" "+MN[d.getMonth()]; };
+  const isAct = b=>new Date(b.arrival)<=now&&new Date(b.departure)>=now;
+  const chN   = b=>b.channel?.name||"Diretto";
 
-  const bHtml=upcoming.length?upcoming.map(b=>{
-    const bd=calcBreakdown(b.price||0,chN(b),b.cleaning_fee||0,fiscal);
+  const bHtml = upcoming.length ? upcoming.map(b=>{
+    const r = calcPrenotazione(b.price||0, chN(b), b.cleaning_fee||0, fiscal);
+    const nettoB = r.subtotale - (r.lordo*(fiscal.gestione||0));
     return `<div class="brow">
-      <div><div style="font-weight:500">${b.firstname||""} ${b.lastname||""}</div>
-      <div style="font-size:11px;color:#888780">${fd2(b.arrival)} → ${fd2(b.departure)} · ${b.nights||"?"} notti</div></div>
+      <div>
+        <div style="font-weight:500">${b.firstname||""} ${b.lastname||""}</div>
+        <div style="font-size:11px;color:#888780">${fd2(b.arrival)} → ${fd2(b.departure)} · ${b.nights||"?"} notti</div>
+      </div>
       <div><span class="tag ${chN(b).toLowerCase().includes('airbnb')?'ta':'tbk'}">${chN(b)}</span></div>
-      <div style="font-weight:500;color:#1D9E75">${fmtE(bd.netto)} <span style="font-size:10px;color:#888780;font-weight:400">netto</span></div>
+      <div style="font-weight:500">${fmtE(r.lordo)} <span style="font-size:10px;color:#888780;font-weight:400">lordo</span></div>
       <div><span class="tag ${isAct(b)?'tg':'tb'}">${isAct(b)?'In corso':'Confermata'}</span></div>
     </div>`;
-  }).join(""):`<p style="font-size:13px;color:#888780;padding:10px 0">Nessuna prenotazione trovata</p>`;
+  }).join("") : `<p style="font-size:13px;color:#888780;padding:10px 0">Nessuna prenotazione trovata</p>`;
 
-  const regLabel=fiscal.regime==="cedolare"?"Cedolare secca 21%":fiscal.regime==="forfettario"?"Regime forfettario":fiscal.regime==="srl"?"SRL":"";
+  // Breakdown spese mese corrente
+  let bdRows = `
+    <div class="bdrow"><span>Entrate lorde</span><span style="font-weight:500">${fmtE(lr)}</span></div>
+    <div class="bdrow neg"><span>Commissioni portali (Airbnb 18,91% / Booking 23,79%)</span><span>-${fmtE(tCommP)}</span></div>`;
+  if(fiscal.regime==="cedolare")
+    bdRows+=`<div class="bdrow neg"><span>Cedolare secca 21% (trattenuta dal portale)</span><span>-${fmtE(tCed)}</span></div>`;
+  if(fiscal.pulizie)
+    bdRows+=`<div class="bdrow neg"><span>Spese pulizie</span><span>-${fmtE(tPul)}</span></div>`;
+  bdRows+=`<div class="bdrow neg"><span>Commissione gestione Prisma Retreats (${Math.round((fiscal.gestione||0)*100)}% sul lordo mensile)</span><span>-${fmtE(tCommG)}</span></div>`;
+  bdRows+=`<div class="bdrow total"><span>Netto proprietario</span><span>${fmtE(ln)}</span></div>`;
 
   document.getElementById("mainContent").innerHTML=`
     <div style="font-size:20px;font-weight:500;margin-bottom:4px">${apt.name}</div>
     <p style="font-size:13px;color:#888780;margin-bottom:20px">
       <span style="background:#EAF3DE;color:#3B6D11;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500">Live</span>
       ${regLabel?`<span style="background:#E6F1FB;color:#185FA5;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;margin-left:6px">${regLabel}</span>`:""}
-      <span style="margin-left:6px">Smoobu · ${MF[tm]} ${ty}</span>
+      <span style="margin-left:6px">Smoobu · ${MFL[tm]} ${ty}</span>
     </p>
+
     <div class="metrics">
-      <div class="metric"><div class="ml">Entrate lorde</div><div class="mv">${fmtE(lr)}</div><div class="md ${lr>=pr?'up':'dn'}">${fmtD(lr,pr)} vs mese prec.</div></div>
+      <div class="metric"><div class="ml">Entrate lorde</div><div class="mv">${fmtE(lr)}</div><div class="md ${lr>=pr?'up':'dn'}">${fmtDE(lr,pr)} vs mese prec.</div></div>
       <div class="metric"><div class="ml">Comm. portali</div><div class="mv">${fmtE(tCommP)}</div><div class="md" style="color:#888780">Airbnb / Booking</div></div>
-      ${fiscal.regime==="cedolare"?`<div class="metric"><div class="ml">Cedolare secca</div><div class="mv">${fmtE(tCed)}</div><div class="md" style="color:#888780">21% sull'imponibile</div></div>`:""}
-      <div class="metric"><div class="ml">Gestione Prisma</div><div class="mv">${fmtE(tCommG)}</div><div class="md" style="color:#888780">${Math.round((fiscal.gestione||0)*100)}% sulla base</div></div>
-      <div class="metric"><div class="ml">Netto proprietario</div><div class="mv" style="color:#1D9E75">${fmtE(ln)}</div><div class="md ${ln>=pn?'up':'dn'}">${fmtD(ln,pn)} vs mese prec.</div></div>
+      ${fiscal.regime==="cedolare"?`<div class="metric"><div class="ml">Cedolare secca</div><div class="mv">${fmtE(tCed)}</div><div class="md" style="color:#888780">21% sul lordo</div></div>`:""}
+      <div class="metric"><div class="ml">Gestione Prisma</div><div class="mv">${fmtE(tCommG)}</div><div class="md" style="color:#888780">${Math.round((fiscal.gestione||0)*100)}% sul lordo</div></div>
+      ${fiscal.pulizie?`<div class="metric"><div class="ml">Pulizie</div><div class="mv">${fmtE(tPul)}</div><div class="md" style="color:#888780">Da Smoobu</div></div>`:""}
+      <div class="metric" style="background:#EAF3DE"><div class="ml" style="color:#3B6D11">Netto proprietario</div><div class="mv" style="color:#1D9E75">${fmtE(ln)}</div><div class="md ${ln>=pn?'up':'dn'}">${fmtDE(ln,pn)} vs mese prec.</div></div>
       <div class="metric"><div class="ml">Occupazione</div><div class="mv">${lo}%</div><div class="md ${lo>=po?'up':'dn'}">${fmtPt(lo,po)} vs mese prec.</div></div>
     </div>
-    <div class="card" style="margin-bottom:14px">
-      <div class="ct">Riepilogo economico — ${MF[tm]} ${ty}</div>
+
+    <div class="card">
+      <div class="ct">Riepilogo economico — ${MFL[tm]} ${ty}</div>
       ${bdRows}
     </div>
+
     <div class="charts-grid">
-      <div class="card"><div class="ct">Occupazione mensile (%)</div><div style="position:relative;height:170px"><canvas id="occChart" role="img" aria-label="Occupazione">Dati occupazione.</canvas></div></div>
-      <div class="card">
+      <div class="card-nm"><div class="ct">Occupazione mensile (%)</div><div style="position:relative;height:180px"><canvas id="occChart" role="img" aria-label="Occupazione">Dati occupazione.</canvas></div></div>
+      <div class="card-nm">
         <div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Lordo</span><span><span class="ldot" style="background:#1D9E75"></span>Netto</span></div>
-        <div class="ct">Lordo vs netto (€)</div>
-        <div style="position:relative;height:170px"><canvas id="revChart" role="img" aria-label="Lordo vs netto">Dati entrate.</canvas></div>
+        <div class="ct">Lordo vs netto mensile (€)</div>
+        <div style="position:relative;height:180px"><canvas id="revChart" role="img" aria-label="Lordo vs netto">Dati.</canvas></div>
       </div>
     </div>
-    <div class="card"><div class="ct">Prenotazioni in corso e prossime</div>${bHtml}</div>`;
+
+    <div class="card">
+      <div class="ct">Andamento spese mensili (€)</div>
+      <div class="legend">
+        <span><span class="ldot" style="background:#D85A30"></span>Comm. portali</span>
+        ${fiscal.regime==="cedolare"?`<span><span class="ldot" style="background:#EF9F27"></span>Cedolare</span>`:""}
+        <span><span class="ldot" style="background:#534AB7"></span>Gestione Prisma</span>
+        ${fiscal.pulizie?`<span><span class="ldot" style="background:#888780"></span>Pulizie</span>`:""}
+      </div>
+      <div style="position:relative;height:200px"><canvas id="expChart" role="img" aria-label="Spese mensili">Dati spese.</canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="ct">Prenotazioni in corso e prossime</div>
+      ${bHtml}
+    </div>`;
 
   requestAnimationFrame(()=>{
     S.charts.push(new Chart(document.getElementById("occChart"),{
@@ -293,13 +377,27 @@ function renderDash(apt, bookings){
       data:{labels:MN,datasets:[{data:occD,borderColor:"#185FA5",backgroundColor:"rgba(24,95,165,0.07)",tension:0.4,fill:true,pointRadius:2,pointBackgroundColor:"#185FA5"}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+"%",font:{size:10},color:"#888780"},grid:{color:"rgba(0,0,0,0.05)"}},x:{ticks:{font:{size:10},color:"#888780",autoSkip:false,maxRotation:0},grid:{display:false}}}}
     }));
+
     S.charts.push(new Chart(document.getElementById("revChart"),{
       type:"bar",
       data:{labels:MN,datasets:[
-        {data:revD,backgroundColor:"rgba(24,95,165,0.5)",borderRadius:2,borderSkipped:false,label:"Lordo"},
-        {data:netD,backgroundColor:"rgba(29,158,117,0.7)",borderRadius:2,borderSkipped:false,label:"Netto"}
+        {data:revD,backgroundColor:"rgba(24,95,165,0.45)",borderRadius:2,borderSkipped:false,label:"Lordo"},
+        {data:netD,backgroundColor:"rgba(29,158,117,0.75)",borderRadius:2,borderSkipped:false,label:"Netto"}
       ]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>"€"+(v/1000).toFixed(1)+"k",font:{size:10},color:"#888780"},grid:{color:"rgba(0,0,0,0.05)"}},x:{ticks:{font:{size:10},color:"#888780",autoSkip:false,maxRotation:0},grid:{display:false}}}}
+    }));
+
+    const expDatasets = [
+      {data:commPD,backgroundColor:"rgba(216,90,48,0.7)",borderRadius:2,borderSkipped:false,label:"Comm. portali"}
+    ];
+    if(fiscal.regime==="cedolare") expDatasets.push({data:cedD,backgroundColor:"rgba(239,159,39,0.7)",borderRadius:2,borderSkipped:false,label:"Cedolare"});
+    expDatasets.push({data:commGD,backgroundColor:"rgba(83,74,183,0.7)",borderRadius:2,borderSkipped:false,label:"Gestione Prisma"});
+    if(fiscal.pulizie) expDatasets.push({data:pulD,backgroundColor:"rgba(136,135,128,0.6)",borderRadius:2,borderSkipped:false,label:"Pulizie"});
+
+    S.charts.push(new Chart(document.getElementById("expChart"),{
+      type:"bar",
+      data:{labels:MN,datasets:expDatasets},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{font:{size:10},color:"#888780",autoSkip:false,maxRotation:0},grid:{display:false}},y:{stacked:true,ticks:{callback:v=>"€"+(v/1000).toFixed(1)+"k",font:{size:10},color:"#888780"},grid:{color:"rgba(0,0,0,0.05)"}}}}
     }));
   });
 }
