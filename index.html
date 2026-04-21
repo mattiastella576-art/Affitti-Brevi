@@ -219,13 +219,12 @@ async function loadDash(apt){
   document.getElementById("mainContent").innerHTML=`<div class="loading">Caricamento dati per ${apt.name}...</div>`;
   const now=new Date();
   const from=new Date(now);from.setMonth(from.getMonth()-11);
-  const to=new Date(now);to.setMonth(to.getMonth()+6);
-  // Periodo anno scorso per confronto YoY (stesso mese, anno precedente)
+  // Periodo anno scorso: carica tutto il mese corrispondente
   const yoyFrom=new Date(now.getFullYear()-1, now.getMonth(), 1);
-  const yoyTo=new Date(now.getFullYear()-1, now.getMonth()+1, 0);
+  const yoyEnd=new Date(now.getFullYear()-1, now.getMonth()+1, 0);
   const f=d=>d.toISOString().slice(0,10);
   try{
-    // Carica tutte le prenotazioni (da -11 mesi a +6 mesi)
+    // Carica tutte le prenotazioni (da -11 mesi in poi, include future)
     let allBookings=[];
     let page=1;
     let hasMore=true;
@@ -236,16 +235,23 @@ async function loadDash(apt){
       if(bookings.length<100) hasMore=false;
       else page++;
     }
-    // Carica prenotazioni anno scorso per YoY
-    let yoyBookings=[];
+    // Carica prenotazioni anno scorso per YoY (dal 1° del mese YoY in poi)
+    let yoyRaw=[];
     page=1; hasMore=true;
     while(hasMore){
-      const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(yoyFrom)}&arrivalTo=${f(yoyTo)}&pageSize=100&page=${page}`);
+      const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(yoyFrom)}&departureFrom=${f(yoyFrom)}&pageSize=100&page=${page}`);
       const bookings=d.bookings||[];
-      yoyBookings=yoyBookings.concat(bookings);
+      yoyRaw=yoyRaw.concat(bookings);
       if(bookings.length<100) hasMore=false;
       else page++;
     }
+    // Filtra lato client: solo prenotazioni con arrivo nel mese YoY
+    const yoyMonth=yoyFrom.getMonth(), yoyYear=yoyFrom.getFullYear();
+    const yoyBookings=yoyRaw.filter(b=>{
+      const parts=String(b.arrival).split(/[-T]/);
+      const m=Number(parts[1])-1, y=Number(parts[0]);
+      return m===yoyMonth && y===yoyYear;
+    });
     renderDash(apt,allBookings,yoyBookings);
   }catch(e){document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`;}
 }
