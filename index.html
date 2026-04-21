@@ -214,8 +214,18 @@ async function loadDash(apt){
   const from=new Date(now);from.setMonth(from.getMonth()-11);
   const f=d=>d.toISOString().slice(0,10);
   try{
-    const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(from)}&departureFrom=${f(from)}&pageSize=100`);
-    renderDash(apt,d.bookings||[]);
+    let allBookings=[];
+    let page=1;
+    let hasMore=true;
+    while(hasMore){
+      const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(from)}&departureFrom=${f(from)}&pageSize=100&page=${page}`);
+      const bookings=d.bookings||[];
+      allBookings=allBookings.concat(bookings);
+      // Se meno di 100 risultati, non ci sono altre pagine
+      if(bookings.length<100) hasMore=false;
+      else page++;
+    }
+    renderDash(apt,allBookings);
   }catch(e){document.getElementById("mainContent").innerHTML=`<div class="loading">Errore: ${e.message}</div>`;}
 }
 
