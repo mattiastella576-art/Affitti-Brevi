@@ -61,6 +61,9 @@ input:focus{border-color:#5B2D8E}
 .ta{background:#FFE0D3;color:#993C1D}
 .tbk{background:#F0E6F6;color:#3D1A6E}
 .loading{text-align:center;padding:3rem;color:#888780;font-size:14px}
+.logo-loader{width:60px;height:60px;position:relative;display:inline-block}
+.logo-loader img{width:100%;height:100%;filter:grayscale(100%);position:absolute;top:0;left:0}
+.logo-loader .logo-fill{filter:none;clip-path:inset(100% 0 0 0);transition:clip-path 0.3s ease}
 .bdrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;color:#5f5e5a;border-bottom:0.5px solid #f0efe8}
 .bdrow:last-child{border-bottom:none}
 .bdrow.neg span:last-child{color:#D85A30}
@@ -167,6 +170,21 @@ function fmtE(n){return"\u20ac"+Math.round(n).toLocaleString("it");}
 function fmtDE(a,b){const d=a-b;return(d>=0?"+":"")+fmtE(Math.abs(d));}
 function fmtPt(a,b){const d=a-b;return(d>=0?"+":"")+Math.round(d)+"pt";}
 function getGreeting(){const h=new Date().getHours();return h<13?"Buongiorno":h<18?"Buon pomeriggio":"Buonasera";}
+
+// Logo loading animation - si colora progressivamente
+const LOGO_B64="data:image/png;base64,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";
+function startLogoAnimation(containerId,pctRef){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  el.innerHTML=`<div class="logo-loader">
+    <img src="${LOGO_B64}" alt="">
+    <img src="${LOGO_B64}" alt="" class="logo-fill" id="${containerId}_fill">
+  </div>`;
+}
+function updateLogoProgress(containerId,pct){
+  const fill=document.getElementById(containerId+"_fill");
+  if(fill)fill.style.clipPath=`inset(${100-Math.min(100,pct)}% 0 0 0)`;
+}
 async function api(ep){const r=await fetch(`/api/smoobu?endpoint=${encodeURIComponent(ep)}`);if(!r.ok)throw new Error("API error");return r.json();}
 
 function doLogin(){
@@ -204,82 +222,124 @@ function renderSidebar(){
 function goHome(){S.cur=null;S.view="home";renderSidebar();showHome();}
 function switchApt(id){S.cur=S.apts.find(a=>a.id===id);S.view="dash";renderSidebar();loadDash(S.cur);}
 
+// Cache per i dati delle prenotazioni
+const dataCache={};
+const CACHE_TTL=5*60*1000; // 5 minuti
+
+async function fetchAllBookings(aptId,fromDate){
+  const f=d=>d.toISOString().slice(0,10);
+  const cacheKey=aptId+"_"+f(fromDate);
+  if(dataCache[cacheKey]&&Date.now()-dataCache[cacheKey].ts<CACHE_TTL) return dataCache[cacheKey].data;
+  let all=[],page=1,more=true;
+  while(more){
+    const d=await api(`reservations?apartmentId=${aptId}&arrivalFrom=${f(fromDate)}&departureFrom=${f(fromDate)}&pageSize=100&page=${page}`);
+    const bk=d.bookings||[];all=all.concat(bk);if(bk.length<100)more=false;else page++;
+  }
+  dataCache[cacheKey]={data:all,ts:Date.now()};
+  return all;
+}
+
+function calcAptSummary(allB,fiscal,now){
+  let aL=0,aCP=0,aCd=0,aPl=0,aN=0,aAct=0;
+  allB.forEach(b=>{
+    if(!b.price||Number(b.price)<=0)return;
+    const mi=getMonthIndex(b.arrival);if(mi!==CUR_IDX)return;
+    const r=calcPrenotazione(b.price,b.channel?.name||"",b.cleaning_fee||0,fiscal);
+    aL+=r.lordo;aCP+=r.commPortale;aCd+=r.cedolare;aPl+=r.pulizie;
+    aN+=calcNights(b.arrival,b.departure);
+  });
+  allB.forEach(b=>{if(new Date(b.arrival)<=now&&new Date(b.departure)>=now&&b.price&&Number(b.price)>0)aAct++;});
+  const aCG=(aL-aCP-aCd)*(fiscal.gestione||0);
+  const aSp=aCP+aCd+aPl+aCG;
+  return{lordo:aL,netto:aL-aSp,occ:Math.min(100,Math.round((aN/30)*100)),active:aAct,nights:aN};
+}
+
 async function showHome(){
   S.charts.forEach(c=>{try{c.destroy()}catch(e){}});S.charts=[];
   const mc=document.getElementById("mainContent");
-  mc.innerHTML=`<div class="loading">Caricamento riepilogo...</div>`;
   const now=new Date(),from=new Date(now);from.setMonth(from.getMonth()-11);
-  const f=d=>d.toISOString().slice(0,10);
   const firstName=S.user.name.split(" ")[0];
-  let totalLordo=0,totalNetto=0,totalNights=0,activeBookings=0;
-  let aptSummaries=[];
-
-  for(const apt of S.apts){
-    const fiscal=getFiscalForApt(apt.id);
-    let allB=[],page=1,more=true;
-    while(more){
-      const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(from)}&departureFrom=${f(from)}&pageSize=100&page=${page}`);
-      const bk=d.bookings||[];allB=allB.concat(bk);if(bk.length<100)more=false;else page++;
-    }
-    let aL=0,aCP=0,aCd=0,aPl=0,aN=0,aAct=0;
-    allB.forEach(b=>{
-      if(!b.price||Number(b.price)<=0)return;
-      const mi=getMonthIndex(b.arrival);if(mi!==CUR_IDX)return;
-      const r=calcPrenotazione(b.price,b.channel?.name||"",b.cleaning_fee||0,fiscal);
-      aL+=r.lordo;aCP+=r.commPortale;aCd+=r.cedolare;aPl+=r.pulizie;
-      aN+=calcNights(b.arrival,b.departure);
-    });
-    allB.forEach(b=>{if(new Date(b.arrival)<=now&&new Date(b.departure)>=now&&b.price&&Number(b.price)>0)aAct++;});
-    const aCG=(aL-aCP-aCd)*(fiscal.gestione||0);
-    const aSp=aCP+aCd+aPl+aCG;
-    const aNet=aL-aSp;
-    const aOcc=Math.min(100,Math.round((aN/30)*100));
-    totalLordo+=aL;totalNetto+=aNet;totalNights+=aN;activeBookings+=aAct;
-    aptSummaries.push({...apt,lordo:aL,netto:aNet,occ:aOcc,active:aAct});
-  }
-
-  const totalOcc=S.apts.length>0?Math.min(100,Math.round((totalNights/(30*S.apts.length))*100)):0;
   const curMN=MFL[now.getMonth()]+" "+now.getFullYear();
-  const aptCards=aptSummaries.map(a=>`
-    <div class="home-apt-card" onclick="switchApt('${a.id}')">
-      <div style="font-size:14px;font-weight:500;margin-bottom:8px">${a.name}</div>
-      <div style="display:flex;gap:16px;font-size:12px;color:#888780;flex-wrap:wrap">
-        <div><span style="color:#1a1a18;font-weight:500">${fmtE(a.lordo)}</span> lordo</div>
-        <div><span style="color:#1D9E75;font-weight:500">${fmtE(a.netto)}</span> netto</div>
-        <div>${a.occ}% occ.</div>
-        ${a.active>0?`<span class="tag tg">${a.active} in corso</span>`:""}
-      </div>
-    </div>`).join("");
+  const total=S.apts.length;
 
+  // Mostra subito hero + placeholder con progresso
   mc.innerHTML=`
     <div class="hero-card">
       <img class="hero-img" src="${HERO_IMG}" alt="">
       <div class="hero-overlay">
-        <div class="hero-greeting">${getGreeting()}, ${firstName}</div>
-        <div class="hero-sub">Ecco il riepilogo dei tuoi appartamenti \u2014 ${curMN}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1">
+          <div id="heroLogo" style="margin-bottom:12px"></div>
+          <div class="hero-greeting">${getGreeting()}, ${firstName}</div>
+          <div class="hero-sub" id="homeProgress">Caricamento... 0/${total}</div>
+        </div>
       </div>
     </div>
-    <div class="metrics">
-      <div class="metric purple"><div class="ml">Entrate lorde totali</div><div class="mv" style="color:#5B2D8E">${fmtE(totalLordo)}</div><div class="md" style="color:#888780">${curMN}</div></div>
-      <div class="metric green"><div class="ml">Netto totale</div><div class="mv" style="color:#1D9E75">${fmtE(totalNetto)}</div><div class="md" style="color:#888780">${curMN}</div></div>
-      <div class="metric"><div class="ml">Occupazione media</div><div class="mv">${totalOcc}%</div><div class="md" style="color:#888780">${S.apts.length} appartament${S.apts.length===1?"o":"i"}</div></div>
-      <div class="metric"><div class="ml">Soggiorni attivi</div><div class="mv">${activeBookings}</div><div class="md" style="color:#888780">In questo momento</div></div>
+    <div class="metrics" id="homeMetrics">
+      <div class="metric purple"><div class="ml">Entrate lorde totali</div><div class="mv" id="hmLordo" style="color:#5B2D8E">\u2014</div><div class="md" style="color:#888780">${curMN}</div></div>
+      <div class="metric green"><div class="ml">Netto totale</div><div class="mv" id="hmNetto" style="color:#1D9E75">\u2014</div><div class="md" style="color:#888780">${curMN}</div></div>
+      <div class="metric"><div class="ml">Occupazione media</div><div class="mv" id="hmOcc">\u2014</div><div class="md" style="color:#888780">${total} appartament${total===1?"o":"i"}</div></div>
+      <div class="metric"><div class="ml">Soggiorni attivi</div><div class="mv" id="hmActive">\u2014</div><div class="md" style="color:#888780">In questo momento</div></div>
     </div>
     <div class="ct" style="margin-bottom:12px">I tuoi appartamenti</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">${aptCards}</div>`;
+    <div id="aptCardsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px"></div>`;
+
+  // Carica tutti gli appartamenti in parallelo
+  startLogoAnimation("heroLogo",null);
+  let loaded=0,totalLordo=0,totalNetto=0,totalNights=0,activeBookings=0;
+  const results=await Promise.all(S.apts.map(async apt=>{
+    const fiscal=getFiscalForApt(apt.id);
+    const allB=await fetchAllBookings(apt.id,from);
+    const sm=calcAptSummary(allB,fiscal,now);
+    loaded++;
+    totalLordo+=sm.lordo;totalNetto+=sm.netto;totalNights+=sm.nights;activeBookings+=sm.active;
+    // Aggiorna progresso logo e totali
+    updateLogoProgress("heroLogo",Math.round((loaded/total)*100));
+    const pg=document.getElementById("homeProgress");
+    if(pg)pg.textContent=`Caricamento... ${loaded}/${total}`;
+    const el=id=>document.getElementById(id);
+    if(el("hmLordo"))el("hmLordo").textContent=fmtE(totalLordo);
+    if(el("hmNetto"))el("hmNetto").textContent=fmtE(totalNetto);
+    if(el("hmOcc"))el("hmOcc").textContent=Math.min(100,Math.round((totalNights/(30*loaded))*100))+"%";
+    if(el("hmActive"))el("hmActive").textContent=activeBookings;
+    // Aggiungi card subito
+    const grid=document.getElementById("aptCardsGrid");
+    if(grid){
+      const div=document.createElement("div");
+      div.className="home-apt-card";
+      div.onclick=()=>switchApt(apt.id);
+      div.innerHTML=`<div style="font-size:14px;font-weight:500;margin-bottom:8px">${apt.name}</div>
+        <div style="display:flex;gap:16px;font-size:12px;color:#888780;flex-wrap:wrap">
+          <div><span style="color:#1a1a18;font-weight:500">${fmtE(sm.lordo)}</span> lordo</div>
+          <div><span style="color:#1D9E75;font-weight:500">${fmtE(sm.netto)}</span> netto</div>
+          <div>${sm.occ}% occ.</div>
+          ${sm.active>0?`<span class="tag tg">${sm.active} in corso</span>`:""}
+        </div>`;
+      grid.appendChild(div);
+    }
+    return{...apt,...sm};
+  }));
+
+  // Finalizza - aggiorna hero con layout finale
+  const heroOverlay=mc.querySelector('.hero-overlay');
+  if(heroOverlay){
+    heroOverlay.innerHTML=`
+      <div class="hero-greeting">${getGreeting()}, ${firstName}</div>
+      <div class="hero-sub">Ecco il riepilogo dei tuoi appartamenti \u2014 ${curMN}</div>`;
+    heroOverlay.style.justifyContent="flex-end";
+  }
 }
 
 async function loadDash(apt){
   S.charts.forEach(c=>{try{c.destroy()}catch(e){}});S.charts=[];
-  document.getElementById("mainContent").innerHTML=`<div class="loading">Caricamento dati per ${apt.name}...</div>`;
+  document.getElementById("mainContent").innerHTML=`<div class="loading"><div id="loadingLogo" style="margin:0 auto 16px"></div>Caricamento dati per ${apt.name}...</div>`;
+  startLogoAnimation("loadingLogo",null);
   const now=new Date(),from=new Date(now);from.setMonth(from.getMonth()-11);
   const yoyFrom=new Date(now.getFullYear()-1,now.getMonth(),1);
-  const f=d=>d.toISOString().slice(0,10);
   try{
-    let allB=[],page=1,more=true;
-    while(more){const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(from)}&departureFrom=${f(from)}&pageSize=100&page=${page}`);const bk=d.bookings||[];allB=allB.concat(bk);if(bk.length<100)more=false;else page++;}
-    let yoyRaw=[],p2=1,m2=true;
-    while(m2){const d=await api(`reservations?apartmentId=${apt.id}&arrivalFrom=${f(yoyFrom)}&departureFrom=${f(yoyFrom)}&pageSize=100&page=${p2}`);const bk=d.bookings||[];yoyRaw=yoyRaw.concat(bk);if(bk.length<100)m2=false;else p2++;}
+    const [allB,yoyRaw]=await Promise.all([
+      fetchAllBookings(apt.id,from),
+      fetchAllBookings(apt.id,yoyFrom)
+    ]);
     const ym=yoyFrom.getMonth(),yy=yoyFrom.getFullYear();
     const yoyB=yoyRaw.filter(b=>{const p=String(b.arrival).split(/[-T]/);return Number(p[1])-1===ym&&Number(p[0])===yy;});
     S.allData[apt.id]={bookings:allB,yoyBookings:yoyB};
