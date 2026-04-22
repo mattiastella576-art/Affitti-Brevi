@@ -61,9 +61,9 @@ input:focus{border-color:#5B2D8E}
 .ta{background:#FFE0D3;color:#993C1D}
 .tbk{background:#F0E6F6;color:#3D1A6E}
 .loading{text-align:center;padding:3rem;color:#888780;font-size:14px}
-.logo-loader{width:60px;height:60px;position:relative;display:inline-block}
-.logo-loader img{width:100%;height:100%;filter:grayscale(100%);position:absolute;top:0;left:0}
-.logo-loader .logo-fill{filter:none;clip-path:inset(100% 0 0 0);transition:clip-path 0.3s ease}
+.back-btn{display:none;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:#F0E6F6;color:#5B2D8E;border:none;font-size:13px;font-weight:500;cursor:pointer;margin-bottom:12px}
+.back-btn:hover{background:#5B2D8E;color:#fff}
+@media(max-width:680px){.back-btn{display:inline-flex}}
 .bdrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;color:#5f5e5a;border-bottom:0.5px solid #f0efe8}
 .bdrow:last-child{border-bottom:none}
 .bdrow.neg span:last-child{color:#D85A30}
@@ -170,21 +170,6 @@ function fmtE(n){return"\u20ac"+Math.round(n).toLocaleString("it");}
 function fmtDE(a,b){const d=a-b;return(d>=0?"+":"")+fmtE(Math.abs(d));}
 function fmtPt(a,b){const d=a-b;return(d>=0?"+":"")+Math.round(d)+"pt";}
 function getGreeting(){const h=new Date().getHours();return h<13?"Buongiorno":h<18?"Buon pomeriggio":"Buonasera";}
-
-// Logo loading animation - si colora progressivamente
-const LOGO_B64="data:image/png;base64,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";
-function startLogoAnimation(containerId,pctRef){
-  const el=document.getElementById(containerId);
-  if(!el)return;
-  el.innerHTML=`<div class="logo-loader">
-    <img src="${LOGO_B64}" alt="">
-    <img src="${LOGO_B64}" alt="" class="logo-fill" id="${containerId}_fill">
-  </div>`;
-}
-function updateLogoProgress(containerId,pct){
-  const fill=document.getElementById(containerId+"_fill");
-  if(fill)fill.style.clipPath=`inset(${100-Math.min(100,pct)}% 0 0 0)`;
-}
 async function api(ep){const r=await fetch(`/api/smoobu?endpoint=${encodeURIComponent(ep)}`);if(!r.ok)throw new Error("API error");return r.json();}
 
 function doLogin(){
@@ -267,11 +252,8 @@ async function showHome(){
     <div class="hero-card">
       <img class="hero-img" src="${HERO_IMG}" alt="">
       <div class="hero-overlay">
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1">
-          <div id="heroLogo" style="margin-bottom:12px"></div>
-          <div class="hero-greeting">${getGreeting()}, ${firstName}</div>
-          <div class="hero-sub" id="homeProgress">Caricamento... 0/${total}</div>
-        </div>
+        <div class="hero-greeting">${getGreeting()}, ${firstName}</div>
+        <div class="hero-sub" id="homeProgress">Caricamento... 0/${total}</div>
       </div>
     </div>
     <div class="metrics" id="homeMetrics">
@@ -284,7 +266,6 @@ async function showHome(){
     <div id="aptCardsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px"></div>`;
 
   // Carica tutti gli appartamenti in parallelo
-  startLogoAnimation("heroLogo",null);
   let loaded=0,totalLordo=0,totalNetto=0,totalNights=0,activeBookings=0;
   const results=await Promise.all(S.apts.map(async apt=>{
     const fiscal=getFiscalForApt(apt.id);
@@ -292,8 +273,7 @@ async function showHome(){
     const sm=calcAptSummary(allB,fiscal,now);
     loaded++;
     totalLordo+=sm.lordo;totalNetto+=sm.netto;totalNights+=sm.nights;activeBookings+=sm.active;
-    // Aggiorna progresso logo e totali
-    updateLogoProgress("heroLogo",Math.round((loaded/total)*100));
+    // Aggiorna progresso e totali
     const pg=document.getElementById("homeProgress");
     if(pg)pg.textContent=`Caricamento... ${loaded}/${total}`;
     const el=id=>document.getElementById(id);
@@ -331,8 +311,7 @@ async function showHome(){
 
 async function loadDash(apt){
   S.charts.forEach(c=>{try{c.destroy()}catch(e){}});S.charts=[];
-  document.getElementById("mainContent").innerHTML=`<div class="loading"><div id="loadingLogo" style="margin:0 auto 16px"></div>Caricamento dati per ${apt.name}...</div>`;
-  startLogoAnimation("loadingLogo",null);
+  document.getElementById("mainContent").innerHTML=`<div class="loading">Caricamento dati per ${apt.name}...</div>`;
   const now=new Date(),from=new Date(now);from.setMonth(from.getMonth()-11);
   const yoyFrom=new Date(now.getFullYear()-1,now.getMonth(),1);
   try{
@@ -417,6 +396,10 @@ function renderDash(apt,bookings,yoyBookings,viewIdx){
   const tCP=commPD[CUR_IDX],tCd=cedD[CUR_IDX],tCG=commGD[CUR_IDX],tPl=pulD[CUR_IDX];
 
   document.getElementById("mainContent").innerHTML=`
+    <button class="back-btn" onclick="goHome()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Home
+    </button>
     <div style="font-size:20px;font-weight:500;margin-bottom:4px">${apt.name}</div>
     <p style="font-size:13px;color:#888780;margin-bottom:20px">
       <span style="background:#EAF3DE;color:#3B6D11;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500">Live</span>
