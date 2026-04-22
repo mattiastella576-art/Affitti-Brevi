@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/api/smoobu", "destination": "/api/smoobu" },
+    { "source": "/manifest.json", "destination": "/manifest.json" },
+    { "source": "/sw.js", "destination": "/sw.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
